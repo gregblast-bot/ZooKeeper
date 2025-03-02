@@ -48,7 +48,7 @@ class ElectionMaster(object):
 
 
 if __name__ == '__main__':
-    client_id = sys.argv[1]
+    client_id = 1
     detector = ElectionMaster(client_id)
     detector.create_node()
     input("wait to quit:\n")
