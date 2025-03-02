@@ -1,4 +1,3 @@
-#-*- coding: utf-8 -*-
 import time
 from kazoo.client import KazooClient
 from kazoo.recipe.watchers import ChildrenWatch
@@ -22,6 +21,7 @@ class ElectionMaster(object):
                                                         func=self.detectLeader)
         self.zk.start()
         self.host_seq_list = []
+        self.data_store = {}  # Dictionary to store key-value pairs
 
     def detectLeader(self, childrens):
         print("childern:", childrens)
@@ -43,8 +43,15 @@ class ElectionMaster(object):
     def __del__(self):
         self.zk.close()
 
+    def read(self, key):
+        return self.data_store.get(key, "")
 
-
+    def add_update(self, key, value):
+        if self.is_leader():
+            self.data_store[key] = value
+            self.propagate_update(key, value)
+        else:
+            print("Not the leader. Cannot perform Add/Update operation.")
 
 
 if __name__ == '__main__':
