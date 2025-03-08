@@ -1,4 +1,5 @@
 import subprocess
+import sys
 import time
 import requests
 
@@ -17,6 +18,7 @@ def stop_docker():
 def start_server(host, port, zookeeper_ip, zookeeper_port):
     print(f"\033[32mStarting Server On {host}:{port}...\033[0m")
     server = subprocess.Popen(["python", "ZooKeeper.py", "--host", host, "--port", port, "--zookeeper", zookeeper_ip, "--zookeeper_port", zookeeper_port])
+    time.sleep(10) # Wait for server to start
     return port, server
 
 # Terminate each instance and wait for them to finish                      
@@ -55,7 +57,6 @@ def main():
         start_docker()
 
         servers = [start_server(host, port, zookeeper_ip, zookeeper_port) for port in ports]
-        time.sleep(10)  # Wait for servers to start and elect a leader
 
         print("\033[32mTesting Add and Read...\033[0m")
         for i in range(3):
@@ -74,7 +75,6 @@ def main():
                 stop_server(server)
                 time.sleep(30)  # Wait for new leader election
                 start_server(host, port, zookeeper_ip, zookeeper_port)
-                time.sleep(10) # Wait for servers to start
 
         print("\033[32mTesting Stale Read...\033[0m")
         for i in range(3):
@@ -87,8 +87,6 @@ def main():
             for j in range(3):
                 print(f"\033[36mFor Port: {ports[i]}\033[0m")
                 read_key(host, ports[i], f"key{j}") # Check existing keys on all ports
-
-        time.sleep(10)
 
     # Handle an exception, so many exceptions... :/
     except Exception as e:

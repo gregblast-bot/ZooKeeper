@@ -56,12 +56,12 @@ class ElectionMaster(object):
             return False
     
     # Propogate updates to replicas
-    def propagate_update(self, key, value):
+    def propagate_update(self, data_store):
         print(f"\033[33mReplicas: {self.replicas}\033[0m")
         for replica in self.replicas:
             try:
                 url = f"http://{replica}/propagate"
-                response = requests.post(url, json={"key": key, "value": value})
+                response = requests.post(url, json={"data_store": data_store})
                 if response.status_code == 200:
                     print(f"\033[32mSuccessfully propagated update to {replica}\033[0m")
                 else:
@@ -83,7 +83,7 @@ class ElectionMaster(object):
                 # If leader, update key-value pair and propogate to replicas
                 if self.detectLeader(childrens):
                     self.data_store[key] = value
-                    self.propagate_update(key, value)
+                    self.propagate_update(self.data_store)
                 else:
                     print(f"\033[33mOnly leader can add/update key-value pairs.\033[0m")
             else:
@@ -93,8 +93,8 @@ class ElectionMaster(object):
             print(f"\033[31mError in add_update: {e}\033[0m")
 
     # Propagate key-value pair to replicas
-    def propagate(self, key, value):
-        self.data_store[key] = value
+    def propagate(self, data_store):
+        self.data_store = data_store
         print(f"\033[33mPropagating....\033[0m")
 
     # Kill the leader
@@ -128,9 +128,8 @@ def update():
 @app.route('/propagate', methods=['POST'])
 def propagate():
     data = request.get_json()
-    key = data['key']
-    value = data['value']
-    detector.propagate(key, value)
+    data_store = data['data_store']
+    detector.propagate(data_store)
     return jsonify({"status": "propagated"})
 
 # Define PUT method route for finding leader to kill
@@ -149,6 +148,7 @@ if __name__ == '__main__':
     parser.add_argument('--zookeeper_port', required=True, help='ZooKeeper Port')
     args = parser.parse_args()
 
+    # Setup election master
     client_id = args.host + ":" + args.port
     detector = ElectionMaster(client_id, args.zookeeper, args.zookeeper_port)
     detector.create_node()
