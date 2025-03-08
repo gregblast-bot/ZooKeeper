@@ -35,50 +35,45 @@ class ElectionMaster(object):
     # Create a zookeeper node
     def create_node(self):
         node_path = self.zk.create(os.path.join(self.leadernode, "%s_" % self.client_id), b"host:", ephemeral=True, sequence=True, makepath=True)
-        print(f"Created node: {node_path}")
+        print(f"\033[33mCreated node: {node_path}\033[0m")
 
     # Detect the leader depending on the smallest sequence number
     def detectLeader(self, childrens):
-        print(f"Childrens: {childrens}")
+        print(f"\033[33mChildrens: {childrens}\033[0m")
 
         self.host_seq_list = [i.split("_") for i in childrens]
         sorted_host_seqvalue = sorted(self.host_seq_list, key=operator.itemgetter(1))
-        print(f"sorted_host_seqvalue: {sorted_host_seqvalue}")
+        print(f"\033[33msorted_host_seqvalue: {sorted_host_seqvalue}\033[0m")
 
         # If sequence number is the smallest, then the client is the leader
         if sorted_host_seqvalue and sorted_host_seqvalue[0][0] == self.client_id:
-            print(f"I am current leader: {self.client_id}")
+            print(f"\033[33mI am current leader: {self.client_id}\033[0m")
             # Convert sorted_host_seqvalue back to the desired string format
             self.replicas = [f"{host}" for host, _ in sorted_host_seqvalue[1:]]
             return True
         else:
-            print(f"I am a worker: {self.client_id}")
+            print(f"\033[33mI am a worker: {self.client_id}\033[0m")
             return False
     
     # Propogate updates to replicas
     def propagate_update(self, key, value):
-        print(f"Replicas: {self.replicas}")
+        print(f"\033[33mReplicas: {self.replicas}\033[0m")
         for replica in self.replicas:
             try:
-                response = requests.post(f"http://{replica}/update", json={"key": key, "value": value})
+                url = f"http://{replica}/propagate"
+                response = requests.post(url, json={"key": key, "value": value})
                 if response.status_code == 200:
-                    print(f"Successfully propagated update to {replica}")
+                    print(f"\033[32mSuccessfully propagated update to {replica}\033[0m")
                 else:
-                    print(f"Failed to propagate update to {replica}: {response.status_code}")
+                    print(f"\033[31mFailed to propagate update to {replica}: {response.status_code}\033[0m")
             except requests.exceptions.RequestException as e:
-                print(f"Error propagating update to {replica}: {e}")
-
-    def broadcast_new_leader(self, leader):
-        for replica in self.replicas:
-            try:
-                requests.post(replica + "/new_leader", json={"leader": leader})
-            except Exception as e:
-                print(f"Failed to notify {replica}: {e}")
+                print(f"\033[31mError propagating update to {replica}: {e}\033[0m")
 
     # Return the value for the key in the dictionary, otherwise return empty string
     def read(self, key):
         return self.data_store.get(key, "")
 
+    # Add or update a key-value pair
     def add_update(self, key, value):
         try:
             # Check if path exists before gettings children and detecting leader
@@ -90,21 +85,27 @@ class ElectionMaster(object):
                     self.data_store[key] = value
                     self.propagate_update(key, value)
                 else:
-                    print(f"Only leader can add/update key-value pairs.")
+                    print(f"\033[33mOnly leader can add/update key-value pairs.\033[0m")
             else:
-                print(f"Path {self.leadernode} does not exist.")
+                print(f"\033[31mPath {self.leadernode} does not exist.\033[0m")
 
         except Exception as e:
-            print(f"Error in add_update: {e}")
+            print(f"\033[31mError in add_update: {e}\033[0m")
 
+    # Propagate key-value pair to replicas
+    def propagate(self, key, value):
+        self.data_store[key] = value
+        print(f"\033[33mPropagating....\033[0m")
+
+    # Kill the leader
     def kill(self):
         sorted_host_seqvalue = sorted(self.host_seq_list, key=operator.itemgetter(1))
         # If sequence number is the smallest, then the client is the leader
         if sorted_host_seqvalue and sorted_host_seqvalue[0][0] == self.client_id:
-            print(f"I am the current leader to kill: {self.client_id}")
+            print(f"\033[33mI am the current leader to kill: {self.client_id}\033[0m")
             return True
         else:
-            print(f"I am a helpless worker to keep alive: {self.client_id}")
+            print(f"\033[33mI am a helpless worker to keep alive: {self.client_id}\033[0m")
             return False
 
 # Define GET method route for reading a key-value pair
@@ -122,6 +123,15 @@ def update():
     value = data['value']
     detector.add_update(key, value)
     return jsonify({"status": "updated"})
+
+# Define PUT method route for finding leader to kill
+@app.route('/propagate', methods=['POST'])
+def propagate():
+    data = request.get_json()
+    key = data['key']
+    value = data['value']
+    detector.propagate(key, value)
+    return jsonify({"status": "propagated"})
 
 # Define PUT method route for finding leader to kill
 @app.route('/kill', methods=['GET'])
