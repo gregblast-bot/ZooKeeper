@@ -44,28 +44,30 @@ def main():
         start_docker()
 
         servers = [start_server(host, port, zookeeper_ip, zookeeper_port) for port in ports]
-        time.sleep(10)  # Wait for servers to start and elect a leader
+        time.sleep(30)  # Wait for servers to start and elect a leader
 
         print("Testing Add and Read...")
         add_update(host, ports[0], "key1", "value1")
+        add_update(host, ports[1], "key2", "value2")
+        add_update(host, ports[2], "key3", "value3")
         for port in ports:
             read_key(host, port, "key1")
 
         print("Testing Leader Election...")
         stop_server(servers[0])
-        time.sleep(10)  # Wait for new leader election
+        time.sleep(30)  # Wait for new leader election
         add_update(host, ports[1], "key2", "value2")
         for port in ports[1:]:
             read_key(host, port, "key2")
 
         print("Testing Stale Read...")
         servers[0] = start_server(host, ports[0], zookeeper_ip, zookeeper_port)
-        time.sleep(10)  # Wait for server to start
+        time.sleep(30)  # Wait for server to start
         read_key(host, ports[0], "key2")
         add_update(host, ports[1], "key2", "new_value2")
         read_key(host, ports[0], "key2")
 
-        time.sleep(10)
+        time.sleep(30)
 
     # Handle an exception
     except Exception as e:
