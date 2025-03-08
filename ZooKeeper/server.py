@@ -59,8 +59,9 @@ def main():
         servers = [start_server(host, port, zookeeper_ip, zookeeper_port) for port in ports]
 
         print("\033[32mTesting Add and Read...\033[0m")
-        for i in range(3):
-            add_update(host, ports[i], f"key{i}", f"value{i}") # All updates routed through server on some elected leader
+        # All updates routed through server on the elected leader. Sending through port 500 as default.
+        add_update(host, ports[0], f"key0", f"value0")
+
         for i in range(3):
             for j in range(3):
                 print(f"\033[36mFor Port: {ports[i]}\033[0m")
@@ -68,8 +69,8 @@ def main():
 
         print("\033[32mTesting Leader Election...\033[0m")
         for port, server in servers:
-            respnse = kill(host, port)
-            is_leader = respnse.get("is_leader", False)
+            response = kill(host, port)
+            is_leader = response.get("is_leader", False)
             if is_leader:
                 print("\033[31mKilling the leader, electing a new one.\033[0m")
                 stop_server(server)
@@ -80,9 +81,10 @@ def main():
         for i in range(3):
             for j in range(3):
                 print(f"\033[36mFor Port: {ports[i]}\033[0m")
-                read_key(host, ports[i], f"key{j}") # Check existing keys on all ports
+                read_key(host, ports[i], f"key{j}") # Check existing keys on all ports, old leader shoud be empty
+        time.sleep(10)
         for i in range(3):
-            add_update(host, ports[i], f"key{i}", f"value{i}") # All updates routed through server on some elected leader
+            add_update(host, ports[i], f"key{i}", f"value{i}") # All updates routed through server on some elected leader, update all
         for i in range(3):
             for j in range(3):
                 print(f"\033[36mFor Port: {ports[i]}\033[0m")

@@ -85,7 +85,13 @@ class ElectionMaster(object):
                     self.data_store[key] = value
                     self.propagate_update(self.data_store)
                 else:
-                    print(f"\033[33mOnly leader can add/update key-value pairs.\033[0m")
+                    print(f"\033[33mOnly leader can add/update key-value pairs. Sending request to leader.\033[0m")
+                    self.host_seq_list = [i.split("_") for i in childrens]
+                    sorted_host_seqvalue = sorted(self.host_seq_list, key=operator.itemgetter(1))
+                    leader = sorted_host_seqvalue[0][0]
+                    print(f"LEADER IS: {leader}")
+                    url = f"http://{leader}/update"
+                    response = requests.post(url, json={"key": key, "value": value})
             else:
                 print(f"\033[31mPath {self.leadernode} does not exist.\033[0m")
 
