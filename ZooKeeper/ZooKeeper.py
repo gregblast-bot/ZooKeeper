@@ -68,6 +68,13 @@ class ElectionMaster(object):
             except requests.exceptions.RequestException as e:
                 print(f"Error propagating update to {replica}: {e}")
 
+    def broadcast_new_leader(self, leader):
+        for replica in self.replicas:
+            try:
+                requests.post(replica + "/new_leader", json={"leader": leader})
+            except Exception as e:
+                print(f"Failed to notify {replica}: {e}")
+
     # Return the value for the key in the dictionary, otherwise return empty string
     def read(self, key):
         return self.data_store.get(key, "")
@@ -91,12 +98,14 @@ class ElectionMaster(object):
             print(f"Error in add_update: {e}")
 
     def kill(self):
-        print("KILL ME")
         sorted_host_seqvalue = sorted(self.host_seq_list, key=operator.itemgetter(1))
         # If sequence number is the smallest, then the client is the leader
         if sorted_host_seqvalue and sorted_host_seqvalue[0][0] == self.client_id:
-            print(f"I am current leader to kill: {self.client_id}")
-            os.kill(os.getpid(), signal.SIGINT)  # Sends a signal to gracefully shutdown the server
+            print(f"I am the current leader to kill: {self.client_id}")
+            return True
+        else:
+            print(f"I am a helpless worker to keep alive: {self.client_id}")
+            return False
 
 # Define GET method route for reading a key-value pair
 @app.route('/read', methods=['GET'])
@@ -114,11 +123,11 @@ def update():
     detector.add_update(key, value)
     return jsonify({"status": "updated"})
 
-# Define PUT method route for updating a key-value pair
-@app.route('/kill', methods=['POST'])
+# Define PUT method route for finding leader to kill
+@app.route('/kill', methods=['GET'])
 def kill():
-    detector.kill()
-    return jsonify({"status": "killed"})
+    is_leader =  detector.kill()
+    return jsonify({"is_leader": is_leader})
 
 # Main method
 if __name__ == '__main__':
