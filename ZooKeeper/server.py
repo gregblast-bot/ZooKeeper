@@ -50,6 +50,7 @@ def kill(host, port):
 def main():
     zookeeper_ip = "127.0.0.1"
     zookeeper_port = "21811"
+    gcp_zookeeper_ip = "10.128.0.4"
     host = "127.0.0.1"
     ports = ["5000", "5001", "5002"]
 
@@ -89,6 +90,35 @@ def main():
             for j in range(3):
                 print(f"\033[36mFor Port: {ports[i]}\033[0m")
                 read_key(host, ports[i], f"key{j}") # Check existing keys on all ports
+
+        ############################ Start Extra Credit Testing ############################
+        # print("Measuring latency for local ZooKeeper...")
+        # start_time = time.time()
+        # servers = [start_server(host, port, zookeeper_ip, zookeeper_port) for port in ports]
+        # time.sleep(10)  # Wait for servers to start and elect a leader
+        # end_time = time.time()
+        # local_latency = end_time - start_time
+        # print(f"Leader election latency: {local_latency:.2f} seconds")
+
+        # for _, server in servers:
+        #     stop_server(server)
+
+        # time.sleep(20)  # Wait for servers to stop
+
+        # print("Measuring latency for GCP ZooKeeper...")
+        # start_time = time.time()
+        # servers = [start_server(gcp_zookeeper_ip, port, zookeeper_ip, zookeeper_port) for port in ports]
+        # time.sleep(10)  # Wait for servers to start and elect a leader
+        # end_time = time.time()
+        # gcp_latency = end_time - start_time
+        # print(f"Leader election latency: {gcp_latency:.2f} seconds")
+
+        # for _, server in servers:
+        #     stop_server(server)
+
+        # print("Local ZooKeeper latencies:", local_latency)
+        # print("GCP ZooKeeper latencies:", gcp_latency)
+        ############################ End Extra Credit Testing ############################
 
     # Handle an exception, so many exceptions... :/
     except Exception as e:
